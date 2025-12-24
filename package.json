@@ -1,0 +1,10 @@
+{
+  "dependencies": {
+    "next": "latest",
+    "react": "latest",
+    "react-dom": "latest",
+    "@mediapipe/pose": "^0.5.1675469404",
+    "@mediapipe/camera_utils": "^0.4.1675466862",
+    "@mediapipe/drawing_utils": "^0.4.1675466139"
+  }
+}
