@@ -1,7 +1,11 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
-import * as mpPose from '@mediapipe/pose';
-import { Camera } from '@mediapipe/camera_utils';
-import { drawConnectors, drawLandmarks } from '@mediapipe/drawing_utils';
+
+// Tell TypeScript that these exist globally (loaded via Script tags)
+declare var Pose: any;
+declare var Camera: any;
+declare var drawConnectors: any;
+declare var drawLandmarks: any;
+declare var POSE_CONNECTIONS: any;
 
 interface KettlebellAnalysisResult {
   reps: number;
@@ -30,6 +34,7 @@ class KettlebellLogic {
   }
 
   update(landmarks: any): KettlebellAnalysisResult {
+    if (!landmarks) return this.getResult(0, 0);
     const shoulder = landmarks[11];
     const hip = landmarks[23];
     const knee = landmarks[25];
@@ -55,11 +60,15 @@ class KettlebellLogic {
         }
     }
 
-    return { reps: this.reps, state: this.state, feedback: this.feedback, hipAngle: Math.floor(hipAngle), kneeAngle: Math.floor(kneeAngle), isFormBad: this.isFormBad };
+    return this.getResult(hipAngle, kneeAngle);
+  }
+
+  getResult(h: number, k: number): KettlebellAnalysisResult {
+    return { reps: this.reps, state: this.state, feedback: this.feedback, hipAngle: Math.floor(h), kneeAngle: Math.floor(k), isFormBad: this.isFormBad };
   }
 }
 
-export const useKettlebellAnalyzer = ({ webcamRef, canvasRef, width, height }: any) => {
+export const useKettlebellAnalyzer = ({ webcamRef, canvasRef, width, height, isReady }: any) => {
     const [result, setResult] = useState<KettlebellAnalysisResult | null>(null);
     const logic = useRef(new KettlebellLogic());
 
@@ -70,7 +79,7 @@ export const useKettlebellAnalyzer = ({ webcamRef, canvasRef, width, height }: a
         canvasCtx.clearRect(0, 0, width, height);
         canvasCtx.drawImage(results.image, 0, 0, width, height);
         if (results.poseLandmarks) {
-            drawConnectors(canvasCtx, results.poseLandmarks, mpPose.POSE_CONNECTIONS, { color: '#00FF00', lineWidth: 4 });
+            drawConnectors(canvasCtx, results.poseLandmarks, POSE_CONNECTIONS, { color: '#00FF00', lineWidth: 4 });
             drawLandmarks(canvasCtx, results.poseLandmarks, { color: '#FF0000', lineWidth: 2 });
             setResult(logic.current.update(results.poseLandmarks));
         }
@@ -78,14 +87,21 @@ export const useKettlebellAnalyzer = ({ webcamRef, canvasRef, width, height }: a
     }, [canvasRef, width, height]);
 
     useEffect(() => {
-        const pose = new mpPose.Pose({ locateFile: (f) => `https://cdn.jsdelivr.net/npm/@mediapipe/pose/${f}` });
+        if (!isReady || typeof Pose === 'undefined') return;
+
+        const pose = new Pose({ locateFile: (f: string) => `https://cdn.jsdelivr.net/npm/@mediapipe/pose/${f}` });
         pose.setOptions({ modelComplexity: 1, smoothLandmarks: true, minDetectionConfidence: 0.5, minTrackingConfidence: 0.5 });
         pose.onResults(onResults);
+
         if (webcamRef.current) {
-            const camera = new Camera(webcamRef.current, { onFrame: async () => { await pose.send({ image: webcamRef.current! }); }, width, height });
+            const camera = new Camera(webcamRef.current, { 
+                onFrame: async () => { await pose.send({ image: webcamRef.current! }); }, 
+                width, 
+                height 
+            });
             camera.start();
         }
-    }, [onResults, webcamRef, width, height]);
+    }, [onResults, webcamRef, width, height, isReady]);
 
     return { result };
 };
