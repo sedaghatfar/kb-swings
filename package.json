@@ -1,4 +1,14 @@
-"dependencies": {
+{
+  "name": "kb-swings",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint"
+  },
+  "dependencies": {
     "next": "latest",
     "react": "latest",
     "react-dom": "latest",
@@ -7,3 +17,4 @@
     "@mediapipe/drawing_utils": "latest",
     "react-webcam": "^7.2.0"
   }
+}
